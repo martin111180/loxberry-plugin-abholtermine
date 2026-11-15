@@ -9,8 +9,9 @@
   * `bin/service.sh`: start/stop/restart/status/watchdog; startet die Bridge als Benutzer `loxberry`
   * `webfrontend/htmlauth/index.php`: Weboberfläche (Status, Einstellungen, Adress-Auswahl über Proxy zu umweltprofis.at)
   * `config/abholtermine.json`: Standardkonfiguration; `config/requirements.txt`: Python-Pakete (exakt gepinnt)
+  * `icons/`: Logo „unsere Umwelt Profis“ von www.umweltprofis.at, auf 64/128/256/512 px skaliert
 * `tests/`: Unit-Tests mit Ausschnitten der echten Website (`tests/fixtures/`)
-* `tools/build_zip.py`: baut `dist/loxberry-plugin-abholtermine-<version>.zip`; `tools/make_icons.py`: Icons
+* `tools/build_zip.py`: baut `dist/loxberry-plugin-abholtermine-<version>.zip`
 
 Alle Textdateien brauchen LF-Zeilenenden (`.gitattributes` erzwingt das; `build_zip.py` bricht bei CRLF ab).
 

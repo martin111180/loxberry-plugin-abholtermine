@@ -60,3 +60,8 @@ Anleitung und Vorschläge für Anzeige und Erinnerung: [docs/loxone.md](docs/lox
 ## Entwicklung
 
 Siehe [docs/entwicklung.md](docs/entwicklung.md).
+
+## Hinweis
+
+Inoffizielles Plugin, nicht von den OÖ Umwelt Profis. Das Plugin-Symbol ist das Logo „unsere Umwelt Profis“
+von [umweltprofis.at](https://www.umweltprofis.at); Name und Logo gehören den jeweiligen Rechteinhabern.

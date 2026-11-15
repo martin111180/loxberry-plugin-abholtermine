@@ -1,0 +1,20 @@
+# Build-Ergebnis
+dist/
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Lokale Testdaten (können Adressen enthalten)
+*.local.json
+status.json
+termine.json
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

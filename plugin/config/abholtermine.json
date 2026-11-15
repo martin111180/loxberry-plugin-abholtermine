@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "location": {
+    "district": "",
+    "district_name": "",
+    "city": "",
+    "city_name": "",
+    "street": "",
+    "street_name": "",
+    "house": "",
+    "house_name": ""
+  },
+  "days": 14,
+  "reminder_time": "18:00",
+  "filters": {},
+  "refresh_hours": 6,
+  "topic": "abholtermine",
+  "republish_seconds": 300,
+  "loglevel": "INFO",
+  "mqtt": {
+    "use_loxberry": true,
+    "host": "localhost",
+    "port": 1883,
+    "user": "",
+    "password": ""
+  }
+}

@@ -206,16 +206,6 @@ function weekday_date($at_iso) {
 	return $at_days[(int)date('N', $at_ts) - 1] . ', ' . date('d.m.Y', $at_ts);
 }
 
-// Topics, die die Loxone-Vorlage (docs/loxone.md) braucht: Übersicht, Erinnerung, Fehler und je Tonne tage/text.
-// Ausgeblendete Abfallarten haben keine Werte und fehlen deshalb automatisch.
-function subscription_topics($status, $topic) {
-	$keys = ['naechste_tage', 'naechste_text', 'erinnerung', 'erinnerung_text', 'bridge/error'];
-	foreach (array_keys((array)($status['values'] ?? [])) as $k) {
-		if (preg_match('#^[a-z0-9_]+/(tage|text)$#', (string)$k)) $keys[] = (string)$k;
-	}
-	return array_map(function ($k) use ($topic) { return "$topic/$k"; }, $keys);
-}
-
 function render_live() {
 	global $at_status, $at_cfg, $at_topic, $at_loc;
 	$at_running = is_running();
@@ -309,10 +299,6 @@ LBWeb::lbheader(tr('UI.TITLE'), "", "");
 	<button type="submit" name="action" value="restart" data-inline="true" data-mini="true"><?= t('UI.BTN_RESTART') ?></button>
 	<button type="submit" name="action" value="stop" data-inline="true" data-mini="true"><?= t('UI.BTN_STOP') ?></button>
 </form>
-<h3><?= t('UI.SUBSCRIPTIONS') ?></h3>
-<p class="at-hint"><?= t('UI.SUBSCRIPTIONS_HINT', '<code>' . h($at_topic) . '/#</code>') ?></p>
-<?php $at_subs = subscription_topics($at_status, $at_topic); ?>
-<textarea id="at-subs" readonly rows="<?= count($at_subs) ?>" style="font-family:monospace"><?= h(implode("\n", $at_subs)) ?></textarea>
 <p class="at-hint"><?= t('UI.HINT_REFRESH', '<code>' . h($at_topic) . '/cmd/refresh</code>') ?></p>
 
 <script>

@@ -14,8 +14,8 @@ Das Plugin liefert deshalb **fertige Werte**:
 
 ## 1. MQTT Gateway
 
-Im Plugin unter *Einstellungen → Abfallarten* zuerst die Tonnen abwählen, die es nicht gibt. Dann zeigt die
-Statusseite unter **„Abos für das MQTT Gateway“** genau die Topics, die diese Vorlage braucht, z. B.:
+Im Plugin unter *Einstellungen → Abfallarten* zuerst die Tonnen abwählen, die es nicht gibt. Für eine
+Übersichtskachel mit Push-Erinnerung reichen fünf Topics:
 
 ```
 abholtermine/naechste_tage
@@ -23,14 +23,11 @@ abholtermine/naechste_text
 abholtermine/erinnerung
 abholtermine/erinnerung_text
 abholtermine/bridge/error
-abholtermine/restabfall/tage
-abholtermine/restabfall/text
-…
 ```
 
 Diese Zeilen in LoxBerry → *MQTT Gateway* → *Subscriptions* eintragen. Unter *Incoming Overview* erscheinen dann
-die Eingänge, z. B. `abholtermine_naechste_text`, `abholtermine_restabfall_tage`. Wer alle Werte haben möchte,
-abonniert stattdessen `abholtermine/#`.
+die Eingänge, z. B. `abholtermine_naechste_text`. Wer zusätzlich je Tonne eine Anzeige möchte, abonniert
+`abholtermine/<art>/tage` und `abholtermine/<art>/text`; wer alles möchte, `abholtermine/#`.
 
 In Loxone Config (Virtuelle Eingänge des MQTT Gateways) anlegen:
 

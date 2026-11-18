@@ -26,10 +26,9 @@ und fertige Texte für App und Push-Nachricht kommen direkt vom Plugin.
 2. Plugin *Abholtermine Umweltprofis* öffnen → **Einstellungen** → Bezirk, Ort, Straße, Hausnummer wählen → **Speichern**.
 3. Nach dem ersten Abruf in den Einstellungen bei Tonnen, die es bei dir nicht gibt, den Haken entfernen und bei
    Abfallarten mit mehreren Intervallen das eigene wählen.
-4. Im **MQTT Gateway** unter *Subscriptions* die Zeilen eintragen, die das Plugin auf der Statusseite unter
-   „Abos für das MQTT Gateway“ anzeigt (nur die Werte, die die Loxone-Vorlage braucht). Wer alle Werte möchte,
-   abonniert `abholtermine/#`. Die Eingänge heißen dann z. B. `abholtermine_naechste_text`,
-   `abholtermine_restabfall_tage`.
+4. Im **MQTT Gateway** unter *Subscriptions* nur die Topics eintragen, die in Loxone gebraucht werden – für die
+   Vorlage in [docs/loxone.md](docs/loxone.md) sind das fünf. Wer alle Werte möchte, abonniert `abholtermine/#`.
+   Die Eingänge heißen dann z. B. `abholtermine_naechste_text`.
 
 ## MQTT-Topics
 

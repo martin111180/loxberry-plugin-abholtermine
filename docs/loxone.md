@@ -14,8 +14,23 @@ Das Plugin liefert deshalb **fertige Werte**:
 
 ## 1. MQTT Gateway
 
-LoxBerry → *MQTT Gateway* → *Subscriptions*: `abholtermine/#` eintragen. Unter *Incoming Overview* erscheinen dann
-die Eingänge, z. B. `abholtermine_morgen`, `abholtermine_restabfall_tage`, `abholtermine_erinnerung_text`.
+Im Plugin unter *Einstellungen → Abfallarten* zuerst die Tonnen abwählen, die es nicht gibt. Dann zeigt die
+Statusseite unter **„Abos für das MQTT Gateway“** genau die Topics, die diese Vorlage braucht, z. B.:
+
+```
+abholtermine/naechste_tage
+abholtermine/naechste_text
+abholtermine/erinnerung
+abholtermine/erinnerung_text
+abholtermine/bridge/error
+abholtermine/restabfall/tage
+abholtermine/restabfall/text
+…
+```
+
+Diese Zeilen in LoxBerry → *MQTT Gateway* → *Subscriptions* eintragen. Unter *Incoming Overview* erscheinen dann
+die Eingänge, z. B. `abholtermine_naechste_text`, `abholtermine_restabfall_tage`. Wer alle Werte haben möchte,
+abonniert stattdessen `abholtermine/#`.
 
 In Loxone Config (Virtuelle Eingänge des MQTT Gateways) anlegen:
 
@@ -23,9 +38,10 @@ In Loxone Config (Virtuelle Eingänge des MQTT Gateways) anlegen:
 |---|---|---|
 | `abholtermine_erinnerung` | Virtueller Eingang (digital) | Auslöser Push-Nachricht |
 | `abholtermine_erinnerung_text` | Virtueller Texteingang | Text der Push-Nachricht |
-| `abholtermine_morgen` | Virtueller Eingang (digital) | z. B. Hinweis-LED / Statusfarbe |
+| `abholtermine_morgen` | Virtueller Eingang (digital) | optional, z. B. Hinweis-LED (zusätzlich abonnieren) |
+| `abholtermine_naechste_tage` | Virtueller Eingang (analog) | Farbe des Übersichts-Statusbausteins |
 | `abholtermine_naechste_text` | Virtueller Texteingang | Anzeige in der App |
-| `abholtermine_liste` | Virtueller Texteingang | Anzeige aller Termine |
+| `abholtermine_liste` | Virtueller Texteingang | optional, alle Termine in einer Zeile (zusätzlich abonnieren) |
 | `abholtermine_<art>_tage` | Virtueller Eingang (analog) | Anzeige je Tonne, Statusbaustein |
 | `abholtermine_<art>_text` | Virtueller Texteingang | Anzeige je Tonne |
 | `abholtermine_bridge_error` | Virtueller Texteingang | Überwachung (alles außer `OK` = Problem) |

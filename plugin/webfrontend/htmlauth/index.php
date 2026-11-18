@@ -149,8 +149,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 		$at_time = $_POST['reminder_time'] ?? '18:00';
 		$at_cfg['reminder_time'] = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $at_time) ? $at_time : '18:00';
 		$at_filters = [];
+		$at_use = (array)($_POST['use'] ?? []);
+		$at_checkboxes = isset($_POST['types_shown']);
 		foreach ((array)($_POST['filter'] ?? []) as $at_name => $at_val) {
 			$at_val = (string)$at_val;
+			// Haken entfernt = Tonne nicht vorhanden -> Abfallart ausblenden (keine Topics, nicht in Liste/Erinnerung)
+			if ($at_checkboxes && !isset($at_use[$at_name])) $at_val = '-';
 			if ($at_val !== '') $at_filters[(string)$at_name] = $at_val;
 		}
 		$at_cfg['filters'] = $at_filters;
@@ -200,6 +204,16 @@ function weekday_date($at_iso) {
 	$at_days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 	$at_ts = strtotime($at_iso);
 	return $at_days[(int)date('N', $at_ts) - 1] . ', ' . date('d.m.Y', $at_ts);
+}
+
+// Topics, die die Loxone-Vorlage (docs/loxone.md) braucht: Übersicht, Erinnerung, Fehler und je Tonne tage/text.
+// Ausgeblendete Abfallarten haben keine Werte und fehlen deshalb automatisch.
+function subscription_topics($status, $topic) {
+	$keys = ['naechste_tage', 'naechste_text', 'erinnerung', 'erinnerung_text', 'bridge/error'];
+	foreach (array_keys((array)($status['values'] ?? [])) as $k) {
+		if (preg_match('#^[a-z0-9_]+/(tage|text)$#', (string)$k)) $keys[] = (string)$k;
+	}
+	return array_map(function ($k) use ($topic) { return "$topic/$k"; }, $keys);
 }
 
 function render_live() {
@@ -295,8 +309,11 @@ LBWeb::lbheader(tr('UI.TITLE'), "", "");
 	<button type="submit" name="action" value="restart" data-inline="true" data-mini="true"><?= t('UI.BTN_RESTART') ?></button>
 	<button type="submit" name="action" value="stop" data-inline="true" data-mini="true"><?= t('UI.BTN_STOP') ?></button>
 </form>
-<p class="at-hint"><?= t('UI.HINT_GATEWAY', '<code>' . h($at_topic) . '/#</code>') ?><br>
-<?= t('UI.HINT_REFRESH', '<code>' . h($at_topic) . '/cmd/refresh</code>') ?></p>
+<h3><?= t('UI.SUBSCRIPTIONS') ?></h3>
+<p class="at-hint"><?= t('UI.SUBSCRIPTIONS_HINT', '<code>' . h($at_topic) . '/#</code>') ?></p>
+<?php $at_subs = subscription_topics($at_status, $at_topic); ?>
+<textarea id="at-subs" readonly rows="<?= count($at_subs) ?>" style="font-family:monospace"><?= h(implode("\n", $at_subs)) ?></textarea>
+<p class="at-hint"><?= t('UI.HINT_REFRESH', '<code>' . h($at_topic) . '/cmd/refresh</code>') ?></p>
 
 <script>
 (function () {
@@ -350,18 +367,25 @@ LBWeb::lbheader(tr('UI.TITLE'), "", "");
 	<?php endforeach; ?>
 	<?php else: ?>
 	<p class="at-hint"><?= t('UI.TYPES_HINT') ?></p>
-	<?php foreach ($at_status['types'] as $at_type): $at_name = (string)$at_type['name']; $at_sel = (string)($at_cfg['filters'][$at_name] ?? ''); ?>
-	<label for="filter_<?= h(slug($at_name)) ?>"><?= h($at_name) ?> <span class="at-hint">(<code><?= h($at_topic . '/' . slug($at_name)) ?>/…</code>)</span></label>
-	<select id="filter_<?= h(slug($at_name)) ?>" name="filter[<?= h($at_name) ?>]">
-		<option value="" <?= $at_sel === '' ? 'selected' : '' ?>><?= t('UI.FILTER_DEFAULT') ?><?= !empty($at_type['intervals']) ? h(' (' . $at_type['intervals'][0]['name'] . ')') : '' ?></option>
-		<?php foreach ($at_type['intervals'] ?? [] as $at_iv): ?>
+	<input type="hidden" name="types_shown" value="1">
+	<?php foreach ($at_status['types'] as $at_type): $at_name = (string)$at_type['name']; $at_slug = slug($at_name);
+		$at_sel = (string)($at_cfg['filters'][$at_name] ?? ''); $at_used = $at_sel !== '-'; if (!$at_used) $at_sel = ''; ?>
+	<input type="checkbox" id="use_<?= h($at_slug) ?>" name="use[<?= h($at_name) ?>]" value="1" <?= $at_used ? 'checked' : '' ?>>
+	<label for="use_<?= h($at_slug) ?>"><?= h($at_name) ?> <span class="at-hint">(<code><?= h($at_topic . '/' . $at_slug) ?>/…</code>)</span></label>
+	<?php if (count($at_type['intervals'] ?? []) > 1): ?>
+	<div class="at-interval">
+	<label for="filter_<?= h($at_slug) ?>"><?= t('UI.INTERVAL_FOR', h($at_name)) ?></label>
+	<select id="filter_<?= h($at_slug) ?>" name="filter[<?= h($at_name) ?>]">
+		<option value="" <?= $at_sel === '' ? 'selected' : '' ?>><?= t('UI.FILTER_DEFAULT') ?><?= h(' (' . $at_type['intervals'][0]['name'] . ')') ?></option>
+		<?php foreach ($at_type['intervals'] as $at_iv): ?>
 		<option value="<?= h($at_iv['name']) ?>" <?= $at_sel === (string)$at_iv['name'] ? 'selected' : '' ?>><?= t('UI.FILTER_ONLY', h($at_iv['name'])) ?></option>
 		<?php endforeach; ?>
-		<?php if (count($at_type['intervals'] ?? []) > 1): ?>
 		<option value="*" <?= $at_sel === '*' ? 'selected' : '' ?>><?= t('UI.FILTER_ALL') ?></option>
-		<?php endif; ?>
-		<option value="-" <?= $at_sel === '-' ? 'selected' : '' ?>><?= t('UI.FILTER_NEVER') ?></option>
 	</select>
+	</div>
+	<?php else: ?>
+	<input type="hidden" name="filter[<?= h($at_name) ?>]" value="<?= h($at_sel) ?>">
+	<?php endif; ?>
 	<?php endforeach; ?>
 	<?php endif; ?>
 

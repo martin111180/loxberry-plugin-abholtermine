@@ -129,6 +129,14 @@ class LogicTest(unittest.TestCase):
         v = termine.compute(calendar(), {"Altpapier": "-"}, 14, dt.datetime(2026, 11, 15))["values"]
         self.assertNotIn("altpapier/tage", v)
 
+    def test_hidden_type_not_in_list_or_reminder(self):
+        # wer keine Biotonne hat: kein Bioabfall in Liste, Anzahl und Erinnerung
+        v = termine.compute(calendar(), {"Bioabfall": "-"}, 14, dt.datetime(2026, 11, 24, 19, 0), "18:00")["values"]
+        self.assertNotIn("bioabfall/tage", v)
+        self.assertNotIn("Bioabfall", v["liste"])
+        self.assertEqual(v["morgen"], "0")
+        self.assertEqual(v["erinnerung"], "0")
+
     def test_no_entries(self):
         v = termine.compute({"entries": [], "types": []}, {}, 7, dt.datetime(2026, 11, 15))["values"]
         self.assertEqual(v["naechste_tage"], "-1")

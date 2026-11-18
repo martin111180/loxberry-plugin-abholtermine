@@ -6,7 +6,7 @@ Holt die Müll-Abfuhrtermine der oberösterreichischen Bezirksabfallverbände vo
 weiter – dort muss nichts mehr gerechnet werden: „morgen Abholung“, „in 3 Tagen“, Erinnerungs-Flanke am Vortag
 und fertige Texte für App und Push-Nachricht kommen direkt vom Plugin.
 
-* Adresse per Auswahllisten (wie auf umweltprofis.at), eigenes Intervall je Abfallart (z. B. Restabfall 2- oder 4-wöchentlich)
+* Adresse per Auswahllisten (wie auf umweltprofis.at), Auswahl der eigenen Tonnen, eigenes Intervall je Abfallart (z. B. Restabfall 2- oder 4-wöchentlich)
 * Termine der nächsten *x* Tage (Standard 14), Abruf alle 6 h und sofort per Knopf oder MQTT-Befehl
 * Erinnerung am Vortag zu einer einstellbaren Uhrzeit (Standard 18:00)
 * Automatische Updates über die LoxBerry-Plugin-Verwaltung
@@ -24,9 +24,12 @@ und fertige Texte für App und Push-Nachricht kommen direkt vom Plugin.
    ```
 
 2. Plugin *Abholtermine Umweltprofis* öffnen → **Einstellungen** → Bezirk, Ort, Straße, Hausnummer wählen → **Speichern**.
-3. Nach dem ersten Abruf in den Einstellungen bei Abfallarten mit mehreren Intervallen das eigene wählen.
-4. Im **MQTT Gateway** das Topic `abholtermine/#` abonnieren (Subscriptions). Die Eingänge heißen dann z. B.
-   `abholtermine_morgen`, `abholtermine_restabfall_tage`.
+3. Nach dem ersten Abruf in den Einstellungen bei Tonnen, die es bei dir nicht gibt, den Haken entfernen und bei
+   Abfallarten mit mehreren Intervallen das eigene wählen.
+4. Im **MQTT Gateway** unter *Subscriptions* die Zeilen eintragen, die das Plugin auf der Statusseite unter
+   „Abos für das MQTT Gateway“ anzeigt (nur die Werte, die die Loxone-Vorlage braucht). Wer alle Werte möchte,
+   abonniert `abholtermine/#`. Die Eingänge heißen dann z. B. `abholtermine_naechste_text`,
+   `abholtermine_restabfall_tage`.
 
 ## MQTT-Topics
 

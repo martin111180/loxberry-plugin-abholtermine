@@ -47,6 +47,28 @@ class ParserTest(unittest.TestCase):
         self.assertTrue(trusted.startswith('{"location":'))
 
 
+class DiagnoseTest(unittest.TestCase):
+    def test_short_strips_html(self):
+        self.assertEqual(umweltprofis._short("<html><body><h1>Fehler</h1>  Text</body></html>"), "Fehler Text")
+        self.assertEqual(umweltprofis._short(""), "(leer)")
+        self.assertTrue(umweltprofis._short("x" * 300).endswith("…"))
+
+    def test_title(self):
+        self.assertEqual(umweltprofis._title("<head><title> Abholkalender &amp; mehr </title>"), "Abholkalender & mehr")
+        self.assertEqual(umweltprofis._title("<p>kein Titel</p>"), "(ohne Titel)")
+
+    def test_find_by_name(self):
+        items = [{"id": "1", "name": "Hauptstraße"}, {"id": "2", "name": "6a"}, {"id": "3", "name": "6A "}]
+        self.assertEqual(umweltprofis.find_by_name(items, "hauptstraße")["id"], "1")
+        self.assertEqual(umweltprofis.find_by_name(items, "6a")["id"], "2")  # erster Treffer
+        self.assertIsNone(umweltprofis.find_by_name(items, "Nebenstraße"))
+
+    def test_calendar_without_table_has_no_types(self):
+        data = umweltprofis.parse_calendar("<html><div>Bitte Straße eingeben</div></html>")
+        self.assertEqual(data["types"], [])
+        self.assertEqual(data["entries"], [])
+
+
 class LogicTest(unittest.TestCase):
     def test_slug(self):
         self.assertEqual(termine.slug("Gelber Sack"), "gelber_sack")

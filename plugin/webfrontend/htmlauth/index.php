@@ -433,14 +433,20 @@ LBWeb::lbheader(tr('UI.TITLE'), "", "");
 			.then(function (r) { return r.json().then(function (d) { return r.ok ? d : Promise.reject(d.error || r.status); }); })
 			.then(function (items) {
 				var current = keep ? s.getAttribute('data-current') : '';
+				var hiddenName = document.getElementById(chain[i].sel + '_name');
+				var currentName = keep && hiddenName ? hiddenName.value.trim().toLowerCase() : '';
 				s.innerHTML = '<option value="">' + choose + '</option>';
+				// umweltprofis.at vergibt IDs gelegentlich neu: gespeicherte ID oder sonst gleicher Name
+				var match = items.filter(function (it) { return it.id === current; })[0]
+					|| items.filter(function (it) { return currentName && it.name.trim().toLowerCase() === currentName; })[0];
 				items.forEach(function (it) {
 					var o = document.createElement('option');
 					o.value = it.id; o.textContent = it.name;
-					if (it.id === current) o.selected = true;
+					if (match && it.id === match.id) o.selected = true;
 					s.appendChild(o);
 				});
-				if (items.length === 1 && !current) s.options[1].selected = true;  // z. B. Bezirk Wels: nur ein Ort
+				if (match) s.setAttribute('data-current', match.id);
+				if (items.length === 1 && !match) s.options[1].selected = true;  // z. B. Bezirk Wels: nur ein Ort
 				refreshWidget(s);
 				setName(i);
 				msg.textContent = '';

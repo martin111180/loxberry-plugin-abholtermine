@@ -27,6 +27,13 @@ Key) war bei der Entwicklung (11/2026) nicht erreichbar (HTTP 503). Verwendet we
 
 Ändert sich die Website, schlagen die Tests mit neuen Fixtures fehl bzw. die Bridge meldet `bridge/error`.
 
+**Die IDs sind nicht dauerhaft:** umweltprofis.at vergibt die IDs von Orten, Straßen und Hausnummern bei
+Datenaktualisierungen neu (beobachtet 11/2026: Traun 100820 → 101238). Mit einer veralteten ID antwortet das
+Formular mit einer ganzen Seite statt `redirect:` (→ `LocationRejected`). Die Bridge sucht dann über die
+gespeicherten Namen (`resolve_location`) die neuen IDs, schreibt sie in die Konfiguration und ruft erneut ab.
+Die Weboberfläche wählt in den Listen ebenfalls über den Namen aus, wenn die gespeicherte ID fehlt.
+Bei anderen Fehlern speichert die Bridge die zuletzt geladene Seite in `REPLACELBPDATADIR/fehlerseite.html`.
+
 ## Laufzeit
 
 * Python-Umgebung: `REPLACELBPDATADIR/venv` (von `postinstall.sh` mit `python3 -m venv` angelegt)

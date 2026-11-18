@@ -244,8 +244,10 @@ class MqttPublisher:
 
 
 class Bridge:
-    def __init__(self, cfg: dict, status_file: str, cache_file: str, refresh_flag: str) -> None:
+    def __init__(self, cfg: dict, status_file: str, cache_file: str, refresh_flag: str,
+                 config_file: Optional[str] = None) -> None:
         self.cfg = cfg
+        self.config_file = config_file
         self.status_file = status_file
         self.cache_file = cache_file
         self.refresh_flag = refresh_flag
@@ -309,8 +311,26 @@ class Bridge:
         self.refresh_requested.clear()
         loc = self.cfg["location"]
         log.info("Rufe Termine ab: %s, %s %s", loc.get("city_name"), loc.get("street_name"), loc.get("house_name"))
+        debug_file = os.path.join(os.path.dirname(self.cache_file), "fehlerseite.html")
         try:
-            data = umweltprofis.fetch_calendar(loc["district"], loc["city"], loc["street"], loc["house"])
+            try:
+                data = umweltprofis.fetch_calendar(
+                    loc["district"], loc["city"], loc["street"], loc["house"], debug_file)
+            except umweltprofis.LocationRejected as exc:
+                # umweltprofis.at vergibt die IDs gelegentlich neu -> Adresse über die Namen neu suchen
+                log.warning("%s – suche die Adresse anhand der Namen neu", exc)
+                self.update_location_ids(umweltprofis.resolve_location(
+                    loc["district"], loc["city_name"], loc["street_name"], loc["house_name"]))
+                data = umweltprofis.fetch_calendar(
+                    loc["district"], loc["city"], loc["street"], loc["house"], debug_file)
+            except umweltprofis.UmweltprofisError as exc:
+                # Ein zweiter Versuch mit neuer Sitzung behebt kurzzeitige Aussetzer der Website
+                log.warning("Abruf fehlgeschlagen: %s – zweiter Versuch in 10 s (Seite gespeichert: %s)",
+                            exc, debug_file)
+                if self.stop_event.wait(10):
+                    return
+                data = umweltprofis.fetch_calendar(
+                    loc["district"], loc["city"], loc["street"], loc["house"], debug_file)
         except umweltprofis.UmweltprofisError as exc:
             self.failures += 1
             wait = RETRY_MINUTES[min(self.failures, len(RETRY_MINUTES)) - 1]
@@ -331,8 +351,35 @@ class Bridge:
         self.next_try = 0.0
         self.error = ""
         self._save_cache()
+        try:
+            os.remove(debug_file)  # Diagnose-Seite eines früheren Fehlers ist überholt
+        except OSError:
+            pass
         log.info("%d Termine, Abfallarten: %s", len(data["entries"]),
                  ", ".join(str(t["name"]) for t in data["types"]))
+
+    def update_location_ids(self, ids: Dict[str, str]) -> None:
+        """Neue IDs übernehmen und in der Konfiguration speichern (die Namen bleiben gleich)."""
+        loc = self.cfg["location"]
+        changed = {k: (loc.get(k), v) for k, v in ids.items() if str(loc.get(k)) != str(v)}
+        if not changed:
+            return
+        log.info("Neue IDs von umweltprofis.at übernommen: %s",
+                 ", ".join(f"{k} {old} -> {new}" for k, (old, new) in changed.items()))
+        loc.update(ids)
+        if not self.config_file:
+            return
+        try:
+            with open(self.config_file, encoding="utf-8") as fh:
+                raw = json.load(fh)
+            raw.setdefault("location", {}).update(ids)
+            tmp = self.config_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(raw, fh, ensure_ascii=False, indent=2)
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, self.config_file)
+        except (OSError, ValueError) as exc:
+            log.warning("Konfiguration konnte nicht aktualisiert werden: %s", exc)
 
     def update_values(self) -> None:
         if self.data:
@@ -436,7 +483,7 @@ def main() -> int:
     setup_logging(args.log, cfg.get("loglevel", "INFO"))
     log.info("Abholtermine-Bridge startet (Python %s)", sys.version.split()[0])
 
-    bridge = Bridge(cfg, args.status, args.cache, args.refresh_flag)
+    bridge = Bridge(cfg, args.status, args.cache, args.refresh_flag, args.config)
 
     def _stop(*_):
         bridge.stop_event.set()

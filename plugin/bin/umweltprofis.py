@@ -41,6 +41,14 @@ class UmweltprofisError(Exception):
     """Fehler bei der Abfrage (Netzwerk, geänderte Website, keine Termine)."""
 
 
+class LocationRejected(UmweltprofisError):
+    """Die Website hat den Wohnort nicht übernommen – meist, weil sich die internen IDs geändert haben.
+
+    umweltprofis.at vergibt die IDs von Orten, Straßen und Hausnummern bei Datenaktualisierungen neu
+    (beobachtet: Traun 100820 -> 101238). Abhilfe: resolve_location() mit den gespeicherten Namen.
+    """
+
+
 # ----------------------------------------------------------------------------
 # HTTP
 # ----------------------------------------------------------------------------
@@ -93,6 +101,30 @@ def get_streets(city: str) -> List[Dict[str, str]]:
 
 def get_house_numbers(street: str) -> List[Dict[str, str]]:
     return _lookup("ajaxGetHouseNumbers", street=str(street))
+
+
+def _norm(name: str) -> str:
+    return re.sub(r"\s+", " ", str(name)).strip().casefold()
+
+
+def find_by_name(items: List[Dict[str, str]], name: str) -> Optional[Dict[str, str]]:
+    """Eintrag mit diesem Namen (Groß-/Kleinschreibung und Leerzeichen egal), sonst None."""
+    wanted = _norm(name)
+    return next((i for i in items if _norm(i["name"]) == wanted), None)
+
+
+def resolve_location(district: str, city_name: str, street_name: str, house_name: str) -> Dict[str, str]:
+    """Aktuelle IDs für Ort, Straße und Hausnummer anhand der Namen suchen (Bezirks-IDs sind fest)."""
+    city = find_by_name(get_cities(district), city_name)
+    if not city:
+        raise UmweltprofisError(f"Ort „{city_name}“ gibt es im Bezirk nicht mehr – Adresse neu auswählen")
+    street = find_by_name(get_streets(city["id"]), street_name)
+    if not street:
+        raise UmweltprofisError(f"Straße „{street_name}“ in {city_name} nicht gefunden – Adresse neu auswählen")
+    house = find_by_name(get_house_numbers(street["id"]), house_name)
+    if not house:
+        raise UmweltprofisError(f"Hausnummer „{house_name}“ in {street_name} nicht gefunden – Adresse neu auswählen")
+    return {"city": city["id"], "street": street["id"], "house": house["id"]}
 
 
 # ----------------------------------------------------------------------------
@@ -175,11 +207,43 @@ def parse_calendar(page: str) -> Dict[str, object]:
     return {"entries": entries, "types": types}
 
 
-def fetch_calendar(district: str, city: str, street: str, house: str) -> Dict[str, object]:
-    """Wohnort setzen und die Termine (laufender + nächster Monat) holen."""
+def _short(text: str, limit: int = 120) -> str:
+    """Kurzfassung einer Antwort für Fehlermeldungen (ohne HTML-Tags)."""
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", html.unescape(text)).strip()
+    return text[:limit] + ("…" if len(text) > limit else "") if text else "(leer)"
+
+
+def _title(page: str) -> str:
+    m = re.search(r"<title>(.*?)</title>", page, re.S | re.I)
+    return _short(m.group(1), 80) if m else "(ohne Titel)"
+
+
+def fetch_calendar(
+    district: str, city: str, street: str, house: str, debug_file: Optional[str] = None
+) -> Dict[str, object]:
+    """Wohnort setzen und die Termine (laufender + nächster Monat) holen.
+
+    debug_file: Bei einem Fehler wird die zuletzt geladene Seite dort gespeichert (zur Diagnose).
+    """
     opener = _opener()
-    page = _read(opener, BASE_URL + CALENDAR_PATH)
-    action, fields = parse_form(page)
+    last_page = ""
+
+    def save_debug(extra: str) -> None:
+        if not debug_file:
+            return
+        try:
+            with open(debug_file, "w", encoding="utf-8") as fh:
+                fh.write(f"<!-- {extra} -->\n{last_page}")
+        except OSError:
+            pass
+
+    last_page = _read(opener, BASE_URL + CALENDAR_PATH)
+    try:
+        action, fields = parse_form(last_page)
+    except UmweltprofisError as exc:
+        save_debug(f"Startseite, Titel: {_title(last_page)}")
+        raise UmweltprofisError(f"{exc} – Seitentitel: {_title(last_page)}") from exc
     fields += [
         (f"{PLUGIN_ARG}[location][district]", str(district)),
         (f"{PLUGIN_ARG}[location][city]", str(city)),
@@ -187,14 +251,22 @@ def fetch_calendar(district: str, city: str, street: str, house: str) -> Dict[st
         (f"{PLUGIN_ARG}[location][houseNumber]", str(house)),
     ]
     answer = _read(opener, urllib.parse.urljoin(BASE_URL, action), urllib.parse.urlencode(fields).encode())
-    target = BASE_URL + CALENDAR_PATH
-    if "redirect:" in answer:
-        target = answer.split("redirect:", 1)[1].strip().split()[0]
+    if "redirect:" not in answer:
+        last_page = answer
+        save_debug("Antwort auf das Wohnort-Formular ohne Weiterleitung")
+        raise LocationRejected(f"Wohnort wurde nicht übernommen (Antwort: Seite „{_title(answer)}“)")
+    target = answer.split("redirect:", 1)[1].strip().split()[0]
     if not target.startswith(BASE_URL + "/"):
         raise UmweltprofisError(f"Unerwartete Weiterleitung: {target[:100]}")
-    data = parse_calendar(_read(opener, target))
+    last_page = _read(opener, target)
+    data = parse_calendar(last_page)
     if not data["types"]:
-        raise UmweltprofisError("Keine Abfallarten gefunden – Adresse prüfen (oder Website geändert)")
+        rows = last_page.count("div-row-table")
+        save_debug(f"{target}, Titel: {_title(last_page)}, Tabellenzeilen: {rows}")
+        raise UmweltprofisError(
+            f"Keine Abfallarten auf {target.replace(BASE_URL, '')} gefunden "
+            f"(Seitentitel: {_title(last_page)}, {len(last_page)} Zeichen, {rows} Tabellenzeilen)"
+        )
     data["source_url"] = target
     return data
 
